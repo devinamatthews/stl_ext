@@ -232,89 +232,99 @@ void emplace_back(std::tuple<Args...>& t, std::tuple<typename Args::value_type..
 }
 
 template <typename T, T... S> struct integer_sequence {};
-template <typename T, T N, T... S> struct static_range : static_range<T, N-1, N-1, S...> {};
-template <typename T, T... S> struct static_range<T, 0, S...> : integer_sequence<T, S...> {};
+
+template <typename T, typename U, typename V> struct concat_sequences;
+template <typename T, T... S, T... R>
+struct concat_sequences<T, integer_sequence<T, S...>, integer_sequence<T, R...>>
+{
+    typedef integer_sequence<T, S..., (R+sizeof...(S))...> type;
+};
+
+template <size_t N> struct static_range_helper;
+
+template <> struct static_range_helper<0>
+{
+    typedef integer_sequence<size_t> type;
+};
+
+template <> struct static_range_helper<1>
+{
+    typedef integer_sequence<size_t,0> type;
+};
+
+template <size_t N> struct static_range_helper
+{
+    typedef typename concat_sequences<size_t, typename static_range_helper<(N+1)/2>::type,
+                                              typename static_range_helper<N/2>::type>::type type;
+};
+
+template <size_t N>
+using static_range = typename static_range_helper<N>::type;
 
 template <typename... Args>
 struct call_helper
 {
-    template <typename Func, int... S>
-    call_helper(Func func, const std::tuple<Args...>& args, integer_sequence<int, S...> seq)
+    template <typename Func, size_t... S>
+    call_helper(Func func, std::tuple<Args...>& args, integer_sequence<size_t, S...> seq)
     {
         func(std::get<S>(args)...);
     }
+
+    template <typename Func, size_t... S>
+    call_helper(Func func, const std::tuple<Args...>& args, integer_sequence<size_t, S...> seq)
+    {
+        func(std::get<S>(args)...);
+    }
+
+    template <typename Func, size_t... S>
+    call_helper(Func func, std::tuple<Args...>&& args, integer_sequence<size_t, S...> seq)
+    {
+        func(std::get<S>(std::move(args))...);
+    }
 };
+
+}
+
+template <typename Func, typename... Args>
+void call(Func func, std::tuple<Args...>& args)
+{
+    detail::call_helper<Args...>(func, args, detail::static_range<sizeof...(Args)>{});
+}
 
 template <typename Func, typename... Args>
 void call(Func func, const std::tuple<Args...>& args)
 {
-    detail::call_helper<Args...>(func, args, detail::static_range<int, sizeof...(Args)>());
+    detail::call_helper<Args...>(func, args, detail::static_range<sizeof...(Args)>{});
 }
 
+template <typename Func, typename... Args>
+void call(Func func, std::tuple<Args...>&& args)
+{
+    detail::call_helper<Args...>(func, std::move(args), detail::static_range<sizeof...(Args)>{});
 }
 
 template <typename... Args>
-std::vector<std::tuple<typename Args::value_type...>> zip(const std::tuple<const Args&...>& v)
+std::vector<std::tuple<typename decay_t<Args>::value_type...>> zip(const std::tuple<Args&&...>& v)
 {
-    std::vector<std::tuple<typename Args::value_type...>> t;
-    t.reserve(detail::min_size(v));
+    //TODO move elements when possible
 
-    auto i = detail::cbegin(v);
-    for (;detail::not_end(i,v);detail::increment(i))
-    {
-        call([&t](typename Args::const_iterator... args) {t.emplace_back(*args...); }, i);
-    }
-
-    return t;
-}
-
-template <typename... Args>
-std::vector<std::tuple<typename Args::value_type...>> zip(const std::tuple<Args...>& v_)
-{
-    return zip(std::tuple<const Args&...>(v_));
-}
-
-/*
-template <typename... Args>
-vector<tuple<typename Args::value_type...>> zip(const Args&... v_)
-{
-    return zip(tuple<const Args&...>(v_...));
-}
-*/
-
-template <typename Arg, typename... Args>
-std::vector<std::tuple<typename Arg::value_type, typename Args::value_type...>> zip(const Arg& v, const Args&... v_)
-{
-    return zip(tuple<const Arg&, const Args&...>(v, v_...));
-}
-
-template <typename... Args>
-std::vector<std::tuple<typename decay_t<Args>::value_type...>> zip(std::tuple<Args...>&& v)
-{
     std::vector<std::tuple<typename decay_t<Args>::value_type...>> t;
     t.reserve(detail::min_size(v));
 
     auto i = detail::cbegin(v);
     for (;detail::not_end(i,v);detail::increment(i))
     {
-        call([&t](typename decay_t<Args>::const_iterator... args) {t.emplace_back(std::move(*args)...); }, i);
+        call([&t](typename decay_t<Args>::const_iterator... args) {t.emplace_back(*args...); }, i);
     }
 
     return t;
 }
 
-/*
-template <typename... Args>
-vector<tuple<typename decay_t<Args>::value_type...>> zip(Args&&... v)
-{
-    return zip(forward_as_tuple(move(v)...));
-}
-*/
-
 template <typename Arg, typename... Args>
-std::vector<std::tuple<typename decay_t<Arg>::value_type, typename decay_t<Args>::value_type...>> zip(Arg&& v, Args&&... v_)
+std::vector<std::tuple<typename decay_t<Arg>::value_type, typename decay_t<Args>::value_type...>>
+zip(Arg&& v, Args&&... v_)
 {
-    return zip(forward_as_tuple(move(v), move(v_)...));
+    return zip(forward_as_tuple(std::forward<Arg>(v), std::forward<Args>(v_)...));
 }
 
 template <typename... Args>

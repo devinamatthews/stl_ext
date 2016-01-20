@@ -6,6 +6,8 @@
 #include <sstream>
 #include <utility>
 
+#include <iostream>
+
 namespace stl_ext
 {
 
@@ -18,12 +20,17 @@ template <typename T> string str(const T& t)
     return oss.str();
 }
 
-inline string str(const string& str)
+inline string& str(string& str)
 {
     return str;
 }
 
-inline string str(string&& str)
+inline const string& str(const string& str)
+{
+    return str;
+}
+
+inline string&& str(string&& str)
 {
     return std::move(str);
 }
@@ -31,6 +38,14 @@ inline string str(string&& str)
 inline const char* str(const char* str)
 {
     return str;
+}
+
+template <typename T, typename... U>
+string str(const string& fmt, T&& t, U&&... u)
+{
+    std::ostringstream oss;
+    oss << printos(fmt, std::forward<T>(t), std::forward<U>(u)...);
+    return oss.str();
 }
 
 inline string& translate(string& s, const string& from, const string& to)
@@ -53,18 +68,10 @@ inline string& translate(string& s, const string& from, const string& to)
     return s;
 }
 
-inline string translate_copy(string&& s, const string& from, const string& to)
+inline string translated(string s, const string& from, const string& to)
 {
-    string s_(std::move(s));
-    translate(s_, from, to);
-    return s_;
-}
-
-inline string translate_copy(const string& s, const string& from, const string& to)
-{
-    string s_(s);
-    translate(s_, from, to);
-    return s_;
+    translate(s, from, to);
+    return s;
 }
 
 inline string toupper(string&& s)

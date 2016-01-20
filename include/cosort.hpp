@@ -20,12 +20,14 @@ struct doublet
 
     friend void swap(doublet& first, doublet& second)
     {
+        using std::swap;
         swap(first.first, second.first);
         swap(first.second, second.second);
     }
 
     friend void swap(doublet&& first, doublet&& second)
     {
+        using std::swap;
         swap(first.first, second.first);
         swap(first.second, second.second);
     }
@@ -34,13 +36,13 @@ struct doublet
     : first(other.first), second(other.second) {}
 
     doublet(doublet<T&,U&>&& other)
-    : first(move(other.first)), second(move(other.second)) {}
+    : first(std::move(other.first)), second(std::move(other.second)) {}
 
     doublet(const doublet<T,U>& other)
     : first(other.first), second(other.second) {}
 
     doublet(doublet<T,U>&& other)
-    : first(move(other.first)), second(move(other.second)) {}
+    : first(std::move(other.first)), second(std::move(other.second)) {}
 
     doublet& operator=(const doublet<T&,U&>& other)
     {
@@ -51,8 +53,8 @@ struct doublet
 
     doublet& operator=(doublet<T&,U&>&& other)
     {
-        first = move(other.first);
-        second = move(other.second);
+        first = std::move(other.first);
+        second = std::move(other.second);
         return *this;
     }
 
@@ -65,8 +67,8 @@ struct doublet
 
     doublet& operator=(doublet<T,U>&& other)
     {
-        first = move(other.first);
-        second = move(other.second);
+        first = std::move(other.first);
+        second = std::move(other.second);
         return *this;
     }
 
@@ -141,12 +143,14 @@ struct doublet<T&,U&>
 
     friend void swap(doublet& first, doublet& second)
     {
+        using std::swap;
         swap(first.first, second.first);
         swap(first.second, second.second);
     }
 
     friend void swap(doublet&& first, doublet&& second)
     {
+        using std::swap;
         swap(first.first, second.first);
         swap(first.second, second.second);
     }
@@ -169,8 +173,8 @@ struct doublet<T&,U&>
 
     doublet& operator=(doublet<T&,U&>&& other)
     {
-        first = move(other.first);
-        second = move(other.second);
+        first = std::move(other.first);
+        second = std::move(other.second);
         return *this;
     }
 
@@ -183,8 +187,8 @@ struct doublet<T&,U&>
 
     doublet& operator=(doublet<T,U>&& other)
     {
-        first = move(other.first);
-        second = move(other.second);
+        first = std::move(other.first);
+        second = std::move(other.second);
         return *this;
     }
 

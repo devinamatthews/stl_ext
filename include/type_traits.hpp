@@ -106,6 +106,14 @@ using enable_if_not_pointer = enable_if<!is_pointer<T>::value,U>;
 template <typename T, typename U=void>
 using enable_if_not_pointer_t = typename enable_if_not_pointer<T,U>::type;
 
+using std::add_pointer;
+template <typename T>
+using add_pointer_t = typename add_pointer<T>::type;
+
+using std::remove_pointer;
+template <typename T>
+using remove_pointer_t = typename remove_pointer<T>::type;
+
 using std::is_reference;
 template <typename T>
 constexpr bool is_reference_v() { return is_reference<T>::value; }
@@ -117,6 +125,18 @@ template <typename T, typename U=void>
 using enable_if_not_reference = enable_if<!is_reference<T>::value,U>;
 template <typename T, typename U=void>
 using enable_if_not_reference_t = typename enable_if_not_reference<T,U>::type;
+
+using std::add_lvalue_reference;
+template <typename T>
+using add_lvalue_reference_t = typename add_lvalue_reference<T>::type;
+
+using std::add_rvalue_reference;
+template <typename T>
+using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;
+
+using std::remove_reference;
+template <typename T>
+using remove_reference_t = typename remove_reference<T>::type;
 
 using std::is_convertible;
 template <typename T, typename U>
@@ -166,6 +186,18 @@ template <typename T, typename U=void>
 struct enable_if_exists { typedef U type; };
 template <typename T, typename U=void>
 using enable_if_exists_t = typename enable_if_exists<T,U>::type;
+
+template <typename T, typename U> using is_similar = is_same<remove_cv_t<T>,remove_cv_t<U>>;
+template <typename T, typename U>
+constexpr bool is_similar_v() { return is_similar<T,U>::value; }
+template <typename T, typename U, typename V=void>
+using enable_if_similar = enable_if<is_similar<T,U>::value,V>;
+template <typename T, typename U, typename V=void>
+using enable_if_similar_t = typename enable_if_similar<T,U,V>::type;
+template <typename T, typename U, typename V=void>
+using enable_if_not_similar = enable_if<!is_similar<T,U>::value,V>;
+template <typename T, typename U, typename V=void>
+using enable_if_not_similar_t = typename enable_if_not_similar<T,U,V>::type;
 
 }
 

@@ -8,17 +8,7 @@
 namespace stl_ext
 {
 
-template <typename T>
-using complex = std::complex<T>;
-
-template <typename T>
-enable_if_arithmetic_t<T,T> conj(T v) { return v; }
-
-template <typename T>
-enable_if_arithmetic_t<T,T> real(T v) { return v; }
-
-template <typename T>
-enable_if_arithmetic_t<T,T> imag(T v) { return T(); }
+using std::complex;
 
 template <typename T> struct real_type             { typedef T type; };
 template <typename T> struct real_type<complex<T>> { typedef T type; };
@@ -43,83 +33,88 @@ using enable_if_not_complex = enable_if<!is_complex<T>::value,U>;
 template <typename T, typename U=void>
 using enable_if_not_complex_t = typename enable_if_not_complex<T,U>::type;
 
+}
+
+namespace std
+{
+
 template <typename T, typename U>
-enable_if_t<is_arithmetic<T>::value &&
+stl_ext::enable_if_t<is_arithmetic<T>::value &&
             is_arithmetic<U>::value &&
-            !is_same<T,U>,complex<common_type_t<T,U>>>
+            !is_same<T,U>::value,complex<stl_ext::common_type_t<T,U>>>
 operator+(const complex<T>& f, U d)
 {
-    typedef common_type_t<T,U> V;
+    typedef stl_ext::common_type_t<T,U> V;
     return complex<V>(f)+V(d);
 }
 
 template <typename T, typename U>
-enable_if_t<is_arithmetic<T>::value &&
+stl_ext::enable_if_t<is_arithmetic<T>::value &&
             is_arithmetic<U>::value &&
-            !is_same<T,U>,complex<common_type_t<T,U>>>
+            !is_same<T,U>::value,complex<stl_ext::common_type_t<T,U>>>
 operator+(T d, const complex<U>& f)
 {
-    typedef common_type_t<T,U> V;
+    typedef stl_ext::common_type_t<T,U> V;
     return V(d)+complex<V>(f);
 }
 
 template <typename T, typename U>
-enable_if_t<is_arithmetic<T>::value &&
+stl_ext::enable_if_t<is_arithmetic<T>::value &&
             is_arithmetic<U>::value &&
-            !is_same<T,U>,complex<common_type_t<T,U>>>
+            !is_same<T,U>::value,complex<stl_ext::common_type_t<T,U>>>
 operator-(const complex<T>& f, U d)
 {
-    typedef common_type_t<T,U> V;
+    typedef stl_ext::common_type_t<T,U> V;
     return complex<V>(f)-V(d);
 }
 
 template <typename T, typename U>
-enable_if_t<is_arithmetic<T>::value &&
+stl_ext::enable_if_t<is_arithmetic<T>::value &&
             is_arithmetic<U>::value &&
-            !is_same<T,U>,complex<common_type_t<T,U>>>
+            !is_same<T,U>::value,complex<stl_ext::common_type_t<T,U>>>
 operator-(T d, const complex<U>& f)
 {
-    typedef common_type_t<T,U> V;
+    typedef stl_ext::common_type_t<T,U> V;
     return V(d)-complex<V>(f);
 }
 
 template <typename T, typename U>
-enable_if_t<is_arithmetic<T>::value &&
+stl_ext::enable_if_t<is_arithmetic<T>::value &&
             is_arithmetic<U>::value &&
-            !is_same<T,U>,complex<common_type_t<T,U>>>
+            !is_same<T,U>::value,complex<stl_ext::common_type_t<T,U>>>
 operator*(const complex<T>& f, U d)
 {
-    typedef common_type_t<T,U> V;
+    typedef stl_ext::common_type_t<T,U> V;
     return complex<V>(f)*V(d);
 }
 
 template <typename T, typename U>
-enable_if_t<is_arithmetic<T>::value &&
+stl_ext::enable_if_t<is_arithmetic<T>::value &&
             is_arithmetic<U>::value &&
-            !is_same<T,U>,complex<common_type_t<T,U>>>
+            !is_same<T,U>::value,complex<stl_ext::common_type_t<T,U>>>
 operator*(T d, const complex<U>& f)
 {
-    typedef common_type_t<T,U> V;
+    typedef stl_ext::common_type_t<T,U> V;
     return V(d)*complex<V>(f);
 }
 
 template <typename T, typename U>
-enable_if_t<is_arithmetic<T>::value &&
+stl_ext::enable_if_t<is_arithmetic<T>::value &&
             is_arithmetic<U>::value &&
-            !is_same<T,U>,complex<common_type_t<T,U>>>
+            !is_same<T,U>::value,complex<stl_ext::common_type_t<T,U>>>
 operator/(const complex<T>& f, U d)
 {
-    typedef common_type_t<T,U> V;
+    typedef stl_ext::common_type_t<T,U> V;
     return complex<V>(f)/V(d);
 }
 
 template <typename T, typename U>
-enable_if_t<is_arithmetic<T>::value &&
+stl_ext::enable_if_t<is_arithmetic<T>::value &&
             is_arithmetic<U>::value &&
-            !is_same<T,U>,complex<common_type_t<T,U>>>
+            !is_same<T,U>::value,complex<stl_ext::common_type_t<T,U>>>
 operator/(T d, const complex<U>& f)
 {
-    typedef common_type_t<T,U> V;
+    typedef stl_ext::common_type_t<T,U> V;
     return V(d)/complex<V>(f);
 }
 

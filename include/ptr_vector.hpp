@@ -25,11 +25,13 @@ class ptr_vector_
             friend class ptr_vector_;
 
             public:
-                typedef typename std::iterator_traits<ptr_>::iterator_category iterator_category;
+                typedef typename std::random_access_iterator_tag iterator_category;
                 typedef typename std::iterator_traits<ptr_>::value_type value_type;
                 typedef typename std::iterator_traits<ptr_>::difference_type difference_type;
                 typedef typename std::iterator_traits<ptr_>::pointer pointer;
+                typedef const remove_pointer_t<pointer> * const_pointer;
                 typedef typename std::iterator_traits<ptr_>::reference reference;
+                typedef const remove_reference_t<reference> & const_reference;
 
                 typedef conditional_t<is_same<ptr_,value_type*>::value,
                                       typename vector_::iterator,
@@ -40,7 +42,7 @@ class ptr_vector_
                 iterator_(const iterator_& other)
                 : it_(other.it_) {}
 
-                template <typename=enable_if_const_pointer_t<pointer>>
+                template <typename T=pointer, typename=enable_if_const_pointer_t<T>>
                 iterator_(const iterator_<value_type*>& other)
                 : it_(other.it_) {}
 
@@ -50,41 +52,55 @@ class ptr_vector_
                     return *this;
                 }
 
-                template <typename=enable_if_const_pointer_t<pointer>>
+                template <typename T=pointer, typename=enable_if_const_pointer_t<T>>
                 iterator_& operator=(const iterator_<value_type*>& other)
                 {
                     it_ = other.it_;
                     return *this;
                 }
 
-                bool operator==(const iterator_<value_type*>& x)
+                bool operator==(const iterator_<value_type*>& x) const
                 {
                     return it_ == x.it_;
                 }
 
-                bool operator!=(const iterator_<value_type*>& x)
+                bool operator!=(const iterator_<value_type*>& x) const
                 {
                     return it_ != x.it_;
                 }
 
-                bool operator==(const iterator_<const value_type*>& x)
+                bool operator==(const iterator_<const value_type*>& x) const
                 {
                     return it_ == x.it_;
                 }
 
-                bool operator!=(const iterator_<const value_type*>& x)
+                bool operator!=(const iterator_<const value_type*>& x) const
                 {
                     return it_ != x.it_;
                 }
 
-                reference operator*() const
+                template <typename T=reference,
+                          typename=enable_if_not_same_t<T,const_reference>>
+                reference operator*()
                 {
                     return **it_;
                 }
 
-                pointer operator->() const
+                const_reference operator*() const
                 {
-                    return it_->get();
+                    return **it_;
+                }
+
+                template <typename T=pointer,
+                          typename=enable_if_not_same_t<T,const_pointer>>
+                pointer operator->()
+                {
+                    return *it_;
+                }
+
+                const_pointer operator->() const
+                {
+                    return *it_;
                 }
 
                 iterator_& operator++()
@@ -186,18 +202,30 @@ class ptr_vector_
                     return *this;
                 }
 
-                reference operator[](difference_type n) const
+                template <typename T=reference,
+                          typename=enable_if_not_same_t<T,const_reference>>
+                reference operator[](difference_type n)
+                {
+                    return *it_[n];
+                }
+
+                const_reference operator[](difference_type n) const
                 {
                     return *it_[n];
                 }
 
                 friend void swap(iterator_& a, iterator_& b)
                 {
-                    using aquarius::swap;
+                    using std::swap;
                     swap(a.it_, b.it_);
                 }
 
-                ptr_iterator base()
+                ptr_iterator& base()
+                {
+                    return it_;
+                }
+
+                const ptr_iterator& base() const
                 {
                     return it_;
                 }
@@ -210,7 +238,7 @@ class ptr_vector_
 
     public:
         typedef typename vector_::value_type ptr_type;
-        typedef decay_t<decltype(*declval<ptr_type>())> value_type;
+        typedef decay_t<decltype(*std::declval<ptr_type>())> value_type;
         typedef const value_type* const_pointer;
         typedef conditional_t<is_same<ptr_type,const_pointer>::value,
                               const value_type*,
@@ -242,10 +270,10 @@ class ptr_vector_
 
         ptr_vector_(size_type n, value_type&& val)
         {
-            assign(n, forward<value_type>(val));
+            assign(n, std::forward<value_type>(val));
         }
 
-        ptr_vector_(const ptr_vector_&) = delete;
+        ptr_vector_(const ptr_vector_&) = default;
 
         ptr_vector_(ptr_vector_&&) = default;
 
@@ -259,13 +287,15 @@ class ptr_vector_
             assign(il);
         }
 
-        template <typename InputIterator>
+        template <typename InputIterator, typename=
+            enable_if_t<is_convertible<typename std::iterator_traits<InputIterator>::value_type,value_type>::value ||
+                        is_convertible<typename std::iterator_traits<InputIterator>::value_type,ptr_type>::value>>
         ptr_vector_(InputIterator i0, InputIterator i1)
         {
             assign(i0, i1);
         }
 
-        ptr_vector_& operator=(const ptr_vector_&) = delete;
+        ptr_vector_& operator=(const ptr_vector_&) = default;
 
         ptr_vector_& operator=(ptr_vector_&&) = default;
 
@@ -291,22 +321,22 @@ class ptr_vector_
 
         reverse_iterator rbegin()
         {
-            return reverse_iterator(impl_.rbegin());
+            return reverse_iterator(impl_.end());
         }
 
         reverse_iterator rend()
         {
-            return reverse_iterator(impl_.rend());
+            return reverse_iterator(impl_.begin());
         }
 
         const_reverse_iterator rbegin() const
         {
-            return const_reverse_iterator(impl_.rbegin());
+            return const_reverse_iterator(impl_.end());
         }
 
         const_reverse_iterator rend() const
         {
-            return const_reverse_iterator(impl_.rend());
+            return const_reverse_iterator(impl_.begin());
         }
 
         const_iterator cbegin() const
@@ -321,12 +351,12 @@ class ptr_vector_
 
         const_reverse_iterator crbegin() const
         {
-            return const_reverse_iterator(impl_.rbegin());
+            return const_reverse_iterator(impl_.cend());
         }
 
         const_reverse_iterator crend() const
         {
-            return const_reverse_iterator(impl_.rend());
+            return const_reverse_iterator(impl_.cbegin());
         }
 
         ptr_iterator pbegin()
@@ -431,7 +461,7 @@ class ptr_vector_
             {
                 impl_.reserve(n);
 
-                impl_.emplace_back(new value_type(move(x)));
+                impl_.emplace_back(new value_type(std::move(x)));
 
                 for (size_type i = impl_.size();i < n;i++)
                 {
@@ -539,7 +569,7 @@ class ptr_vector_
         void assign(size_type n, value_type&& val)
         {
             impl_.clear();
-            resize(n, move(val));
+            resize(n, std::move(val));
         }
 
         void assign(const ptr_vector_& x)
@@ -549,7 +579,7 @@ class ptr_vector_
 
         void assign(ptr_vector_&& x)
         {
-            *this = move(x);
+            *this = std::move(x);
         }
 
         void assign(std::initializer_list<value_type> il)
@@ -607,7 +637,7 @@ class ptr_vector_
 
         void push_back(value_type&& x)
         {
-            impl_.emplace_back(new value_type(move(x)));
+            impl_.emplace_back(new value_type(std::move(x)));
         }
 
         void push_back(const ptr_type& x)
@@ -617,10 +647,10 @@ class ptr_vector_
 
         void push_back(ptr_type&& x)
         {
-            impl_.push_back(move(x));
+            impl_.push_back(std::move(x));
         }
 
-        template <typename=enable_if_not_same_t<pointer,ptr_type>>
+        template <typename T=pointer, typename=enable_if_not_same_t<T,ptr_type>>
         void push_back(pointer x)
         {
             impl_.emplace_back(x);
@@ -633,55 +663,53 @@ class ptr_vector_
 
         iterator insert(const_iterator position, const value_type& val)
         {
-            impl_.emplace(position.it_, new value_type(val));
-            return *this;
+            return impl_.emplace(position.it_, new value_type(val));
         }
 
         iterator insert(const_iterator position, value_type&& val)
         {
-            impl_.emplace(position.it_, new value_type(move(val)));
-            return *this;
+            return impl_.emplace(position.it_, new value_type(std::move(val)));
         }
 
         iterator insert(const_iterator position, const ptr_type& val)
         {
-            impl_.insert(position.it_, val);
-            return *this;
+            return impl_.insert(position.it_, val);
         }
 
         iterator insert(const_iterator position, ptr_type&& val)
         {
-            impl_.insert(position.it_, move(val));
-            return *this;
+            return impl_.insert(position.it_, std::move(val));
         }
 
         iterator insert(const_iterator position, pointer val)
         {
-            impl_.emplace(position.it_, val);
-            return *this;
+            return impl_.emplace(position.it_, val);
         }
 
         iterator insert(const_iterator position, size_type n, const value_type& val)
         {
-            impl_.reserve(impl_.size()+n);
+            auto m = position-begin();
+            reserve(size()+n);
             auto middle = impl_.end();
-            impl_.resize(impl_.size()+n, val);
-            rotate(impl_.begin(), middle, impl_.end());
-            return *this;
+            resize(size()+n, val);
+            rotate(impl_.begin()+m, middle, impl_.end());
+            return begin()+m;
         }
 
         iterator insert(const_iterator position, size_type n, value_type&& val)
         {
-            impl_.reserve(impl_.size()+n);
+            auto m = position-begin();
+            reserve(size()+n);
             auto middle = impl_.end();
-            impl_.resize(impl_.size()+n, move(val));
-            rotate(impl_.begin(), middle, impl_.end());
-            return *this;
+            resize(size()+n, val);
+            rotate(impl_.begin()+m, middle, impl_.end());
+            return begin()+m;
         }
 
         iterator insert(const_iterator position, std::initializer_list<value_type> il)
         {
-            impl_.reserve(impl_.size()+il.size());
+            auto m = position-begin();
+            reserve(size()+il.size());
             auto middle = impl_.end();
 
             for (auto& val : il)
@@ -689,13 +717,14 @@ class ptr_vector_
                 impl_.emplace_back(new value_type(val));
             }
 
-            rotate(impl_.begin(), middle, impl_.end());
-            return *this;
+            rotate(impl_.begin()+m, middle, impl_.end());
+            return begin()+m;
         }
 
         iterator insert(const_iterator position, std::initializer_list<pointer> il)
         {
-            impl_.reserve(impl_.size()+il.size());
+            auto m = position-begin();
+            reserve(size()+il.size());
             auto middle = impl_.end();
 
             for (auto& ptr : il)
@@ -703,8 +732,8 @@ class ptr_vector_
                 impl_.emplace_back(ptr);
             }
 
-            rotate(impl_.begin(), middle, impl_.end());
-            return *this;
+            rotate(impl_.begin()+m, middle, impl_.end());
+            return begin()+m;
         }
 
         iterator erase(const_iterator position)
@@ -747,21 +776,21 @@ class ptr_vector_
         }
 
         template <typename... Args>
-        void emplace(const_iterator position, Args&&... args)
+        iterator emplace(const_iterator position, Args&&... args)
         {
-            impl_.emplace(position.it_, new value_type(forward<Args>(args)...));
+            return impl_.emplace(position.it_, new value_type(std::forward<Args>(args)...));
         }
 
         template <typename... Args>
         void emplace_back(Args&&... args)
         {
-            impl_.emplace_back(new value_type(forward<Args>(args)...));
+            impl_.emplace_back(new value_type(std::forward<Args>(args)...));
         }
 
         friend bool operator==(const ptr_vector_& lhs, const ptr_vector_& rhs)
         {
             if (lhs.size() != rhs.size()) return false;
-            return equal(lhs.begin(), lhs.end(), rhs.begin());
+            return std::equal(lhs.begin(), lhs.end(), rhs.begin());
         }
 
         friend bool operator!=(const ptr_vector_& lhs, const ptr_vector_& rhs)
@@ -771,8 +800,8 @@ class ptr_vector_
 
         friend bool operator<(const ptr_vector_& lhs, const ptr_vector_& rhs)
         {
-            return lexicographical_compare(lhs.begin(), lhs.end(),
-                                           rhs.begin(), rhs.end());
+            return std::lexicographical_compare(lhs.begin(), lhs.end(),
+                                                rhs.begin(), rhs.end());
         }
 
         friend bool operator>(const ptr_vector_& lhs, const ptr_vector_& rhs)

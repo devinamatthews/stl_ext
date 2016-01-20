@@ -14,22 +14,22 @@ using std::vector;
 namespace detail
 {
 
-template <size_t N, typename T, typename... Ts>
+template <size_t N, typename T, typename U, typename... Ts>
 struct vec_helper
 {
-    vec_helper(vector<decay_t<T>>& v, T&& t, Ts&&... ts)
+    vec_helper(vector<T>& v, U&& t, Ts&&... ts)
     {
-        v.push_back(forward<T>(t));
-        vec_helper<N-1, Ts...>(v, forward<Ts>(ts)...);
+        v.push_back(std::forward<U>(t));
+        vec_helper<N-1, T, Ts...>(v, std::forward<Ts>(ts)...);
     }
 };
 
-template <typename T>
-struct vec_helper<1, T>
+template <typename T, typename U>
+struct vec_helper<1, T, U>
 {
-    vec_helper(vector<decay_t<T>>& v, T&& t)
+    vec_helper(vector<T>& v, U&& t)
     {
-        v.push_back(forward<T>(t));
+        v.push_back(std::forward<U>(t));
     }
 };
 
@@ -40,7 +40,7 @@ vector<decay_t<T>> vec(T&& t, Ts&&... ts)
 {
     vector<decay_t<T>> v;
     v.reserve(1+sizeof...(Ts));
-    detail::vec_helper<1+sizeof...(Ts), T, Ts...>(v, forward<T>(t), forward<Ts>(ts)...);
+    detail::vec_helper<1+sizeof...(Ts), decay_t<T>, T, Ts...>(v, std::forward<T>(t), std::forward<Ts>(ts)...);
     return v;
 }
 
@@ -48,7 +48,7 @@ template<typename T>
 vector<T> slice(const vector<T>& v, ptrdiff_t e1, ptrdiff_t e2)
 {
     if (e1 < 0) e1 += v.size();
-    if (e2 < 0) e1 += v.size();
+    if (e2 < 0) e2 += v.size();
     return vector<T>(v.begin()+e1, v.begin()+e2);
 }
 
@@ -56,7 +56,7 @@ template<typename T>
 vector<T> slice(vector<T>&& v, ptrdiff_t e1, ptrdiff_t e2)
 {
     if (e1 < 0) e1 += v.size();
-    if (e2 < 0) e1 += v.size();
+    if (e2 < 0) e2 += v.size();
     return vector<T>(std::make_move_iterator(v.begin()+e1),
                      std::make_move_iterator(v.begin()+e2));
 }
@@ -75,6 +75,11 @@ vector<T> slice(vector<T>&& v, ptrdiff_t e1)
     return vector<T>(std::make_move_iterator(v.begin()+e1),
                      std::make_move_iterator(v.end()));
 }
+
+}
+
+namespace std
+{
 
 template<typename T> vector<T> operator+(const vector<T>& v1, const vector<T>& v2)
 {

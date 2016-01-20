@@ -21,7 +21,7 @@ class binary_or
         binary_or(Pred1 p1, Pred2 p2) : p1(p1), p2(p2) {}
 
         template <typename T>
-        bool operator()(const T& t)
+        bool operator()(const T& t) const
         {
             return p1(t)||p2(t);
         }
@@ -38,7 +38,7 @@ class binary_and
         binary_and(Pred1 p1, Pred2 p2) : p1(p1), p2(p2) {}
 
         template <typename T>
-        bool operator()(const T& t)
+        bool operator()(const T& t) const
         {
             return p1(t)&&p2(t);
         }
@@ -85,19 +85,23 @@ typename T::value_type min(const T& t)
 }
 
 template <typename T, typename Functor>
-T& erase(T& v, const Functor& f)
+enable_if_not_same_t<typename T::value_type,Functor,T&>
+erase(T& v, const Functor& f)
 {
     v.erase(std::remove_if(v.begin(), v.end(), f), v.end());
+    return v;
 }
 
 template <typename T>
 T& erase(T& v, const typename T::value_type& e)
 {
     v.erase(std::remove(v.begin(), v.end(), e), v.end());
+    return v;
 }
 
 template <typename T, typename Functor>
-T erased(T v, const Functor& x)
+enable_if_not_same_t<typename T::value_type,Functor,T>
+erased(T v, const Functor& x)
 {
     erase(v, x);
     return v;
@@ -114,7 +118,8 @@ template <typename T, class Predicate>
 T& filter(T& v, Predicate pred)
 {
     auto i1 = v.begin();
-    auto i2 = v.begin()
+    auto i2 = v.begin();
+
     while (i1 != v.end())
     {
         if (pred(*i1))
@@ -125,7 +130,7 @@ T& filter(T& v, Predicate pred)
         ++i1;
     }
 
-    v.resize(i1-v.begin());
+    v.resize(i2-v.begin());
     return v;
 }
 
@@ -236,22 +241,37 @@ T& intersect(T& v1, T v2)
     return v1;
 }
 
-template <typename T, typename U>
-enable_if_same_t<decay_t<T>,decay_t<U>,decay_t<T>>
-intersection(T&& v1, U&& v2)
+template <typename T>
+T intersection(const T& v1, const T& v2)
 {
-    if (is_reference<v1>::value)
-    {
-        decay_t<T> v3(std::forward<U>(v2));
-        intersect(v3, std::forward<T>(v1));
-        return v3;
-    }
-    else
-    {
-        decay_t<T> v3(std::forward<T>(v1));
-        intersect(v3, std::forward<U>(v2));
-        return v3;
-    }
+    T v3(v1);
+    intersect(v3, v2);
+    return v3;
+}
+
+template <typename T>
+T intersection(const T& v1, T&& v2)
+{
+    T v3(v1);
+    intersect(v3, std::move(v2));
+    return v3;
+}
+
+template <typename T>
+T intersection(T&& v1, const T& v2)
+{
+    T v3(std::move(v1));
+    intersect(v3, v2);
+    return v3;
+}
+
+template <typename T>
+enable_if_not_reference_t<T,T>
+intersection(T&& v1, T&& v2)
+{
+    T v3(std::move(v1));
+    intersect(v3, std::move(v2));
+    return v3;
 }
 
 template <typename T>
@@ -285,11 +305,37 @@ T& exclude(T& v1, T v2)
     return v1;
 }
 
-template <typename T, typename U>
-T exclusion(T v1, U&& v2)
+template <typename T>
+T exclusion(const T& v1, const T& v2)
 {
-    exclude(v1, std::forward<U>(v2));
-    return v1;
+    T v3(v1);
+    exclude(v3, v2);
+    return v3;
+}
+
+template <typename T>
+T exclusion(const T& v1, T&& v2)
+{
+    T v3(v1);
+    exclude(v3, std::move(v2));
+    return v3;
+}
+
+template <typename T>
+T exclusion(T&& v1, const T& v2)
+{
+    T v3(std::move(v1));
+    exclude(v3, v2);
+    return v3;
+}
+
+template <typename T>
+enable_if_not_reference_t<T,T>
+exclusion(T&& v1, T&& v2)
+{
+    T v3(std::move(v1));
+    exclude(v3, std::move(v2));
+    return v3;
 }
 
 template <typename T>
@@ -316,7 +362,7 @@ T& mask(T& v, const U& m)
     {
         if (*i2)
         {
-            swap(*i1, *i3);
+            std::iter_swap(i1, i3);
             ++i3;
         }
         ++i1;
@@ -335,7 +381,7 @@ T masked(T v, const U& m)
 }
 
 template <typename T, typename U>
-T& translate(T& s, U from, U to)
+T& translate(T& s, std::vector<U> from, std::vector<U> to)
 {
     cosort(from, to);
 
@@ -352,10 +398,31 @@ T& translate(T& s, U from, U to)
     return s;
 }
 
-template <typename T, typename U, typename V>
-T translated(T s, U&& from, V&& to)
+template <typename T, typename U>
+T translated(T s, const std::vector<U>& from, const std::vector<U>& to)
 {
-    translate(s, std::forward<U>(from), std::forward<V>(to));
+    translate(s, from, to);
+    return s;
+}
+
+template <typename T, typename U>
+T translated(T s, const std::vector<U>& from, std::vector<U>&& to)
+{
+    translate(s, from, std::move(to));
+    return s;
+}
+
+template <typename T, typename U>
+T translated(T s, std::vector<U>&& from, const std::vector<U>& to)
+{
+    translate(s, std::move(from), to);
+    return s;
+}
+
+template <typename T, typename U>
+T translated(T s, std::vector<U>&& from, std::vector<U>&& to)
+{
+    translate(s, std::move(from), std::move(to));
     return s;
 }
 

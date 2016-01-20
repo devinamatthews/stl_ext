@@ -1,6 +1,7 @@
-#ifndef _AQUARIUS_STL_EXT_HPP_
-#define _AQUARIUS_STL_EXT_HPP_
+#ifndef _STL_EXT_IOSTREAM_HPP_
+#define _STL_EXT_IOSTREAM_HPP_
 
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <tuple>
@@ -27,7 +28,7 @@ struct print_tuple_helper : print_tuple_helper<I-1, Args...>
     print_tuple_helper(std::ostream& os, const std::tuple<Args...>& t)
     : print_tuple_helper<I-1, Args...>(os, t)
     {
-        os << get<I-1>(t);
+        os << std::get<I-1>(t);
         if (I < sizeof...(Args)) os << ", ";
     }
 };
@@ -37,7 +38,7 @@ struct print_tuple_helper<1, Args...>
 {
     print_tuple_helper(std::ostream& os, const std::tuple<Args...>& t)
     {
-        os << get<0>(t);
+        os << std::get<0>(t);
         if (1 < sizeof...(Args)) os << ", ";
     }
 };
@@ -71,23 +72,23 @@ struct printos_helper
     std::tuple<Args&&...> args;
 
     printos_helper(const std::string& fmt, Args&&... args)
-    : fmt(fmt), args(forward<Args>(args)...) {}
+    : fmt(fmt), args(std::forward<Args>(args)...) {}
 
-    printos_helper(const std::string& fmt, const std::tuple<Args&&...>& args)
-    : fmt(fmt), args(args) {}
+    printos_helper(const std::string& fmt, std::tuple<Args&&...>&& args)
+    : fmt(fmt), args(std::move(args)) {}
 };
 
-template <typename T, enable_if_arithmetic_t<T>>
-constexpr bool is_negative(const T& val) { return val < 0; }
+template <typename T>
+constexpr enable_if_arithmetic_t<T,bool> is_negative(const T& val) { return val < 0; }
 
-template <typename T, typename=enable_if_not_arithmetic_t<T>>
-constexpr bool is_negative(const T& val) { return false; }
+template <typename T>
+constexpr enable_if_not_arithmetic_t<T,bool> is_negative(const T& val) { return false; }
 
-template <typename T, enable_if_arithmetic_t<T>>
-constexpr bool is_nonzero(const T& val) { return val != 0; }
+template <typename T>
+constexpr enable_if_arithmetic_t<T,bool> is_nonzero(const T& val) { return val != 0; }
 
-template <typename T, typename=enable_if_not_arithmetic_t<T>>
-constexpr bool is_nonzero(const T& val) { return false; }
+template <typename T>
+constexpr enable_if_not_arithmetic_t<T,bool> is_nonzero(const T& val) { return false; }
 
 template <typename T>
 enable_if_t<is_integral<T>::value || is_pointer <T>::value>
@@ -104,14 +105,14 @@ enable_if_t<!is_integral<T>::value && !is_pointer <T>::value>
 print_integer(std::ostream& os, const T& val, bool is_signed) {}
 
 template <typename T>
-enable_if_floating_point_t<T>
+enable_if_arithmetic_t<T>
 print_float(std::ostream& os, const T& val)
 {
-    os << val;
+    os << (double)val;
 }
 
 template <typename T>
-enable_if_not_floating_point_t<T>
+enable_if_not_arithmetic_t<T>
 print_float(std::ostream& os, const T& val) {}
 
 template <typename T>
@@ -124,6 +125,50 @@ print_char(std::ostream& os, const T& val)
 template <typename T>
 enable_if_not_integral_t<T>
 print_char(std::ostream& os, const T& val) {}
+
+inline size_t string_size(const char* s)
+{
+    return strlen(s);
+}
+
+inline size_t string_size(const std::string& s)
+{
+    return s.size();
+}
+
+template <typename T>
+enable_if_t<is_same<decay_t<T>,char*>::value ||
+            is_same<decay_t<T>,const char*>::value ||
+            is_same<decay_t<T>,std::string>::value>
+print_string(std::ostream& os, const T& val, int width, int prec, bool left)
+{
+    int sz = string_size(val);
+    if (prec != -1) sz = std::min(sz, prec);
+
+    if (!left)
+    {
+        for (int i = (width < sz ? 0 : width-sz);i --> 0;)
+        {
+            os << ' ';
+        }
+    }
+
+    for (int i = 0;i < sz;i++) os << val[i];
+
+    if (left)
+    {
+        for (int i = (width < sz ? 0 : width-sz);i --> 0;)
+        {
+            os << ' ';
+        }
+    }
+}
+
+template <typename T>
+enable_if_t<!is_same<decay_t<T>,char*>::value &&
+            !is_same<decay_t<T>,const char*>::value &&
+            !is_same<decay_t<T>,std::string>::value>
+print_string(std::ostream& os, const T& val, int width, int prec, bool left) {}
 
 class printf_conversion
 {
@@ -140,7 +185,7 @@ class printf_conversion
     public:
         printf_conversion(std::ostream& os, const std::string& fmt, std::string::const_iterator& i)
         : _left(false), _zero(false), _sign(false), _alt(false), _space(false),
-          _prec(6), _width(0), _conv(0)
+          _prec(-1), _width(0), _conv(0)
         {
             std::string::const_iterator end = fmt.end();
 
@@ -235,7 +280,7 @@ class printf_conversion
                 *i == 'x' || *i == 'X' || *i == 'e' || *i == 'E' ||
                 *i == 'f' || *i == 'F' || *i == 'g' || *i == 'G' ||
                 *i == 'a' || *i == 'A' || *i == 'c' || *i == 's' ||
-                *i == 'p' || *i == 'n')
+                *i == 'p' || *i == 'j')
             {
                 _conv = *i++;
             }
@@ -250,6 +295,10 @@ class printf_conversion
         {
             ios_flag_saver flags(os);
 
+            os << std::setfill(' ') << std::noshowpos << std::dec <<
+                  std::right << std::nouppercase << std::noshowbase <<
+                  std::noshowpoint;
+
             switch (_conv)
             {
                 case 'd':
@@ -261,14 +310,15 @@ class printf_conversion
                 case 'p':
                 {
                     if (_conv != 'p' && !is_integral<T>::value)
-                        throw std::runtime_error("Argument is not integral");
+                        throw std::logic_error("Argument is not integral");
 
                     if (_conv == 'p' && !is_pointer<T>::value)
-                        throw std::runtime_error("Argument is not a pointer");
+                        throw std::logic_error("Argument is not a pointer");
 
-                    os << std::setw(_width) << std::setfill(' ') <<
-                          std::noshowpos << std::dec << std::right <<
-                          std::nouppercase << std::noshowbase;
+                    os << std::setw(_width) <<
+                          std::setprecision(_prec == -1 ? 0 : _prec);
+
+                    //TODO: _space
 
                     if (_conv == 'o')
                         os << std::oct;
@@ -305,13 +355,11 @@ class printf_conversion
                 case 'a':
                 case 'A':
                 {
-                    if (!is_floating_point<T>::value)
-                        throw std::logic_error("Argument is not floating point");
+                    if (!is_arithmetic<T>::value)
+                        throw std::logic_error("Argument is not arithmetic");
 
-                    os << std::setw(_width) << std::setfill(' ') <<
-                          std::noshowpos << std::right << std::nouppercase <<
-                          std::noshowpoint << std::setprecision(_prec) <<
-                          std::fixed;
+                    os << std::setw(_width) <<
+                          std::setprecision(_prec == -1 ? 6 : _prec);
                     os.unsetf(std::ios::floatfield);
 
                     if (_conv == 'E' || _conv == 'F' ||
@@ -322,10 +370,10 @@ class printf_conversion
                         os << std::scientific;
 
                     if (_conv == 'f' || _conv == 'F')
-                        os << std::;
+                        os << std::fixed;
 
                     if (_conv == 'a' || _conv == 'A')
-                        os << std::; //FIXME: hexfloat
+                        os << std::fixed; //FIXME: hexfloat
 
                     if (_zero && !_left)
                         os << std::setfill('0');
@@ -353,15 +401,15 @@ class printf_conversion
                 break;
                 case 's':
                 {
-                    if (!is_same<T,char*>::value &&
-                        !is_same<T,const char*>::value &&
-                        !is_same<T,std::string>::value)
+                    if (!is_same<decay_t<T>,char*>::value &&
+                        !is_same<decay_t<T>,const char*>::value &&
+                        !is_same<decay_t<T>,std::string>::value)
                         throw std::logic_error("Argument is not a string");
 
-                    os << std::setw(_width) << arg;
+                    print_string(os, arg, _width, _prec, _left);
                 }
                 break;
-                case 'n':
+                case 'j':
                 {
                     os << arg;
                 }
@@ -382,7 +430,7 @@ struct printos_printer
     {
         printf_conversion conv(os, h.fmt, i);
         if (!conv) throw std::logic_error("More arguments than conversions");
-        conv.print(os, get<I>(h.args));
+        conv.print(os, std::get<I>(h.args));
         printos_printer<I+1, N, Args...>(os, h, i);
     }
 };
@@ -398,51 +446,63 @@ struct printos_printer<N, N, Args...>
 };
 
 }
+}
+
+namespace std
+{
 
 template <typename... Args>
-std::ostream& operator<<(std::ostream& os, const detail::printos_helper<Args...>& h)
+std::ostream& operator<<(std::ostream& os, const stl_ext::detail::printos_helper<Args...>& h)
 {
-    detail::printos_printer<0, sizeof...(Args), Args...>(os, h, h.fmt.begin());
+    stl_ext::detail::printos_printer<0, sizeof...(Args), Args...>(os, h, h.fmt.begin());
     return os;
-}
-
-template <typename... Args>
-detail::printos_helper<Args...> printos(const std::string& fmt, Args&&... args)
-{
-    return detail::printos_helper<Args...>(fmt, forward<Args>(args)...);
-}
-
-template <typename... Args>
-void print(const std::string& fmt, Args&&... args)
-{
-    cout << printos(fmt, forward<Args>(args)...);
-}
-
-template <typename... Args>
-detail::printos_helper<Args...> operator%(const std::string& fmt, const std::tuple<Args&&...>& args)
-{
-    return detail::printos_helper<Args...>(fmt, args);
-}
-
-template <typename... Args>
-detail::printos_helper<Args...> operator%(const char* fmt, const std::tuple<Args&&...>& args)
-{
-    return detail::printos_helper<Args...>(fmt, args);
-}
-
-template <typename... Args>
-std::tuple<Args&&...> fmt(Args&&... args)
-{
-    return tuple<Args&&...>(forward<Args>(args)...);
 }
 
 template <typename... Args>
 std::ostream& operator<<(std::ostream& os, const std::tuple<Args...>& t)
 {
     os << '{';
-    detail::print_tuple_helper<sizeof...(Args), Args...>(os, t);
+    stl_ext::detail::print_tuple_helper<sizeof...(Args), Args...>(os, t);
     os << '}';
     return os;
+}
+
+template<typename T> std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
+{
+    os << "[";
+    if (!v.empty()) os << v[0];
+    for (size_t i = 1;i < v.size();i++) os << ", " << v[i];
+    os << "]";
+    return os;
+}
+
+}
+
+namespace stl_ext
+{
+
+template <typename... Args>
+detail::printos_helper<Args...> printos(const std::string& fmt, Args&&... args)
+{
+    return detail::printos_helper<Args...>(fmt, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void print(const std::string& fmt, Args&&... args)
+{
+    cout << printos(fmt, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+detail::printos_helper<Args...> operator%(const std::string& fmt, std::tuple<Args&&...>&& args)
+{
+    return detail::printos_helper<Args...>(fmt, std::move(args));
+}
+
+template <typename... Args>
+std::tuple<Args&&...> fmt(Args&&... args)
+{
+    return std::forward_as_tuple(std::forward<Args>(args)...);
 }
 
 namespace detail
@@ -464,11 +524,11 @@ namespace detail
         int d = (int)(l < 0 ? l-1+1e-15 : l);
         if (abs(d) > 2)
         {
-            os << std::scientific << setprecision(p.sigfigs) << p.val;
+            os << std::scientific << std::setprecision(p.sigfigs) << p.val;
         }
         else
         {
-            os << std::fixed << setprecision(p.sigfigs-d) << p.val;
+            os << std::fixed << std::setprecision(p.sigfigs-d) << p.val;
         }
 
         return os;
@@ -489,15 +549,6 @@ detail::sigfig_printer<T> printToAccuracy(const T& value, double accuracy)
 {
     int sigfigs = (int)(ceil(-log10(accuracy))+0.5);
     return detail::sigfig_printer<T>{value, sigfigs};
-}
-
-template<typename T> std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
-{
-    os << "[";
-    if (!v.empty()) os << v[0];
-    for (size_t i = 1;i < v.size();i++) os << ", " << v[i];
-    os << "]";
-    return os;
 }
 
 }
