@@ -175,6 +175,12 @@ TEST(unit_zip, zip)
               zip(forward_as_tuple(vec(0,1,2), vec(3,4,5))));
     EXPECT_EQ(vec(make_tuple(0,3), make_tuple(1,4), make_tuple(2,5)),
               zip(vec(0,1,2), vec(3,4,5)));
+    vector<int> v1{0,1,2};
+    vector<int> v2{3,4,5};
+    EXPECT_EQ(vec(make_tuple(0,3), make_tuple(1,4), make_tuple(2,5)),
+              zip(forward_as_tuple(v1, v2)));
+    EXPECT_EQ(vec(make_tuple(0,3), make_tuple(1,4), make_tuple(2,5)),
+              zip(v1, v2));
 }
 
 TEST(unit_zip, unzip)

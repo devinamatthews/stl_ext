@@ -304,7 +304,7 @@ void call(Func func, std::tuple<Args...>&& args)
 }
 
 template <typename... Args>
-std::vector<std::tuple<typename decay_t<Args>::value_type...>> zip(const std::tuple<Args&&...>& v)
+std::vector<std::tuple<typename decay_t<Args>::value_type...>> zip(const std::tuple<Args...>& v)
 {
     //TODO move elements when possible
 
