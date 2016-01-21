@@ -81,6 +81,9 @@ TEST(unit_ptr_vector, iterator)
     EXPECT_TRUE(i1 <= i1);
     EXPECT_TRUE(i3 >= i1);
     EXPECT_TRUE(i1 >= i1);
+
+    unique_vector<int> ul{1,2,3};
+    EXPECT_EQ(1,*(ul.begin().operator->()));
 }
 
 TEST(unit_ptr_vector, constructor)

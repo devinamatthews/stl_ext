@@ -51,6 +51,9 @@ TEST(unit_ptr_list, iterator)
     EXPECT_TRUE(i1 == i3);
     EXPECT_EQ(&x[1], i1.operator->());
     EXPECT_EQ(&x[1], *i1.base());
+
+    unique_list<int> ul{1,2,3};
+    EXPECT_EQ(1,*(ul.begin().operator->()));
 }
 
 TEST(unit_ptr_list, constructor)

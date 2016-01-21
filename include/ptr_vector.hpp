@@ -95,12 +95,12 @@ class ptr_vector_
                           typename=enable_if_not_same_t<T,const_pointer>>
                 pointer operator->()
                 {
-                    return *it_;
+                    return &**it_;
                 }
 
                 const_pointer operator->() const
                 {
-                    return *it_;
+                    return &**it_;
                 }
 
                 iterator_& operator++()
