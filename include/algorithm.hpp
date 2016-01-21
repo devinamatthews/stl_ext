@@ -381,7 +381,7 @@ T masked(T v, const U& m)
 }
 
 template <typename T, typename U>
-T& translate(T& s, std::vector<U> from, std::vector<U> to)
+T& translate(T& s, U from, U to)
 {
     cosort(from, to);
 
@@ -399,28 +399,29 @@ T& translate(T& s, std::vector<U> from, std::vector<U> to)
 }
 
 template <typename T, typename U>
-T translated(T s, const std::vector<U>& from, const std::vector<U>& to)
+T translated(T s, const U& from, const U& to)
 {
     translate(s, from, to);
     return s;
 }
 
 template <typename T, typename U>
-T translated(T s, const std::vector<U>& from, std::vector<U>&& to)
+T translated(T s, const U& from, U&& to)
 {
     translate(s, from, std::move(to));
     return s;
 }
 
 template <typename T, typename U>
-T translated(T s, std::vector<U>&& from, const std::vector<U>& to)
+T translated(T s, U&& from, const U& to)
 {
     translate(s, std::move(from), to);
     return s;
 }
 
 template <typename T, typename U>
-T translated(T s, std::vector<U>&& from, std::vector<U>&& to)
+enable_if_not_reference_t<U,T>
+translated(T s, U&& from, U&& to)
 {
     translate(s, std::move(from), std::move(to));
     return s;
