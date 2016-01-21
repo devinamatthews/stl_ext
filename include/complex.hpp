@@ -9,6 +9,22 @@ namespace stl_ext
 {
 
 using std::complex;
+using std::real;
+using std::imag;
+
+template <typename T>
+complex<T> conj(const complex<T>& x)
+{
+    return {x.real(), -x.imag()};
+}
+
+template <typename T>
+enable_if_t<is_floating_point<T>::value ||
+            is_integral<T>::value,T>
+conj(T x)
+{
+    return x;
+}
 
 template <typename T> struct real_type             { typedef T type; };
 template <typename T> struct real_type<complex<T>> { typedef T type; };
