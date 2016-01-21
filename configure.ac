@@ -27,7 +27,7 @@ AC_LANG([C++])
 #
 AQ_WITH_PACKAGE([GTest], [],
                 [gtest/gtest.h], [],
-                [testing::Test], [-lgtest -lgtest_main])
+                [testing::Test], [-lgtest -lgtest_main -lpthread])
                 
 mkdir -p bin
 
