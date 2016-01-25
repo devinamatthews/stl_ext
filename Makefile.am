@@ -6,6 +6,7 @@ AM_CPPFLAGS = -I./include @gtest_INCLUDES@
 __top_builddir__bin_test_LDADD = @gtest_LIBS@
 __top_builddir__bin_test_SOURCES = \
 	test/algorithm.cxx \
+	test/bounded_vector.cxx \
 	test/complex.cxx \
 	test/cosort.cxx \
 	test/global_ptr.cxx \
