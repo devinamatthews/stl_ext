@@ -48,6 +48,18 @@ using enable_if_not_complex = enable_if<!is_complex<T>::value,U>;
 template <typename T, typename U=void>
 using enable_if_not_complex_t = typename enable_if_not_complex<T,U>::type;
 
+template <typename T>
+enable_if_complex_t<T,real_type_t<T>> norm2(T x)
+{
+    return x.real()*x.real() + x.imag()*x.imag();
+}
+
+template <typename T>
+enable_if_not_complex_t<T,T> norm2(T x)
+{
+    return x*x;
+}
+
 }
 
 namespace std
@@ -242,7 +254,7 @@ stl_ext::enable_if_t<is_arithmetic<T>::value &&
                      is_arithmetic<U>::value,bool>
 operator<(T a, const complex<U>& b)
 {
-    return a.real()+a.imag() < b.real()+b.imag();
+    return a < b.real()+b.imag();
 }
 
 template <typename T, typename U>
