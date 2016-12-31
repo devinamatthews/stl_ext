@@ -14,16 +14,16 @@ template<class Pred1, class Pred2>
 class binary_or
 {
     protected:
-        Pred1 p1;
-        Pred2 p2;
+        Pred1 p1_;
+        Pred2 p2_;
 
     public:
-        binary_or(Pred1 p1, Pred2 p2) : p1(p1), p2(p2) {}
+        binary_or(Pred1 p1, Pred2 p2) : p1_(p1), p2_(p2) {}
 
         template <typename T>
         bool operator()(const T& t) const
         {
-            return p1(t)||p2(t);
+            return p1_(t) || p2_(t);
         }
 };
 
@@ -31,16 +31,16 @@ template<class Pred1, class Pred2>
 class binary_and
 {
     protected:
-        Pred1 p1;
-        Pred2 p2;
+        Pred1 p1_;
+        Pred2 p2_;
 
     public:
-        binary_and(Pred1 p1, Pred2 p2) : p1(p1), p2(p2) {}
+        binary_and(Pred1 p1, Pred2 p2) : p1_(p1), p2_(p2) {}
 
         template <typename T>
         bool operator()(const T& t) const
         {
-            return p1(t)&&p2(t);
+            return p1_(t) && p2_(t);
         }
 };
 
@@ -152,6 +152,41 @@ auto apply(const T<U>& v, const Functor& f) -> T<decltype(f(std::declval<U>()))>
     return v2;
 }
 
+template <class InputIt, class OutputIt, class T>
+OutputIt prefix_sum(InputIt first, InputIt last, OutputIt d_first, T init)
+{
+    if (first == last) return d_first;
+
+    typename std::iterator_traits<InputIt>::value_type sum = init;
+    *d_first = sum;
+
+    while (++first != last)
+    {
+       sum = sum + *first;
+       *++d_first = sum;
+    }
+
+    return ++d_first;
+}
+
+template <class InputIt, class OutputIt, class T, class BinaryOperation>
+OutputIt prefix_sum(InputIt first, InputIt last, OutputIt d_first, T init,
+                    BinaryOperation op)
+{
+    if (first == last) return d_first;
+
+    typename std::iterator_traits<InputIt>::value_type sum = init;
+    *d_first = sum;
+
+    while (++first != last)
+    {
+       sum = op(sum, *first);
+       *++d_first = sum;
+    }
+
+    return ++d_first;
+}
+
 template <typename T>
 typename T::value_type sum(const T& v)
 {
@@ -259,13 +294,13 @@ T& intersect(T& v1, T v2)
             ++i3;
         }
     }
-    v1.resize(i3-v1.begin());
+    v1.erase(i3, v1.end());
 
     return v1;
 }
 
 template <typename T, typename U, typename... Ts>
-enable_if_t<sizeof...(Ts),T&>
+enable_if_t<(sizeof...(Ts) > 0),T&>
 intersect(T& v1, U&& v2, Ts&&... vs)
 {
     intersect(v1, std::forward<U>(v2));
@@ -306,13 +341,13 @@ T& exclude(T& v1, T v2)
             ++i1;
         }
     }
-    v1.resize(i3-v1.begin());
+    v1.erase(i3, v1.end());
 
     return v1;
 }
 
 template <typename T, typename U, typename... Ts>
-enable_if_t<sizeof...(Ts),T&>
+enable_if_t<(sizeof...(Ts) > 0),T&>
 exclude(T& v1, U&& v2, Ts&&... vs)
 {
     exclude(v1, std::forward<U>(v2));
