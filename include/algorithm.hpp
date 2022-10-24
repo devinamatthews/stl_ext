@@ -761,7 +761,7 @@ auto map(Functor&& func, const T& v)
 {
     typedef std::decay_t<decltype(*v.begin())> R;
     typedef std::decay_t<decltype(func(*v.begin()))> S;
-    typedef std::conditional_t<std::is_same<R,S>::value,T,std::vector<R>> U;
+    typedef std::conditional_t<std::is_same<R,S>::value,T,std::vector<S>> U;
     U v2; v2.reserve(v.size());
     for (auto& e : v) v2.push_back(func(e));
     return v2;
