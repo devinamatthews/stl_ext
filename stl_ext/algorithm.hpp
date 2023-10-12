@@ -294,6 +294,12 @@ auto index_of(const T& v, const U& e)
     return find(v, e) - v.begin();
 }
 
+template <typename T, typename Predicate>
+auto index_where(const T& v, Predicate&& pred)
+{
+    return find_if(v, std::forward<Predicate>(pred)) - v.begin();
+}
+
 template <typename T, typename U>
 bool contains(const T& v, const U& e)
 {
